@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="style.css">
+  <title>私の本棚</title>
+</head>
+
+<body>
+
+  <h1>私の本棚</h1>
+  <hr>
+  <div class="wrapper">
+    <div class="search_area">
+      <div>
+        タイトル検索<input type="text" id="title">
+        <button id="btn">データ取得</button>
+        <!-- <button id="btn_delete">履歴削除</button>
+        <button id="btn_load">データ呼び出し</button> -->
+      </div>
+      <div id="output1"></div>
+      <div id="output2"></div>
+      <div id="output3"></div>
+    </div>
+    <div class="book_area">
+      <div id="bookshelf"></div>
+    </div>
+  </div>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <!-- axiosライブラリの読み込み -->
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.5.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs,
+      serverTimestamp,
+      query,
+      orderBy,
+      onSnapshot,
+    } from "https://www.gstatic.com/firebasejs/9.5.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      authDomain: "bookshelf-7ea14.firebaseapp.com",
+      projectId: "bookshelf-7ea14",
+      storageBucket: "bookshelf-7ea14.appspot.com",
+      messagingSenderId: "640129808415",
+      appId: "1:640129808415:web:9eea5c2016fd4ac78dfd2a"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // リクエストを送るurlを準備
+
+    $("#btn").on("click", function () {
+      const title = $("#title").val();
+      console.log(title);
+
+      const url = 'https://www.googleapis.com/books/v1/volumes?q=intitle:' + title;
+
+      axios.get(url)
+        .then(function (response) {
+
+          //検索結果の画像を表示//
+
+          const array1 = [];
+
+          for (let i = 0; i < response.data.items.length; i++) {
+            array1.push(`<img src="${response.data.items[i].volumeInfo.imageLinks.thumbnail}">`)
+          };
+
+          $("#output1").html(array1);
+
+          //検索結果のタイトルを表示//
+
+          const array2 = [];
+
+          for (let i = 0; i < response.data.items.length; i++) {
+            array2.push(`<p>${response.data.items[i].volumeInfo.title}</p>`)
+          };
+
+          $("#output2").html(array2);
+
+          //選択ボタンを生成//それぞれ別のidを付与//
+
+          const array3 = [];
+
+          for (let i = 0; i < response.data.items.length; i++) {
+            const selectNumber = Object.keys(response.data.items);
+            array3.push(`<button id=${"select" + selectNumber[i]}>選択</button>`);
+            $("#output3").html(array3);
+
+            $(document).ready(function () {
+
+              //生成された選択ボタンをクリック//
+
+              $("#select" + selectNumber[i]).on("click", function () {
+                const bookArray = [];
+                const selectTitle = `<p>${response.data.items[i].volumeInfo.title}</p>`;
+                const selectThumbnail = `<img src="${response.data.items[i].volumeInfo.imageLinks.thumbnail}">`;
+
+                bookArray.push(selectThumbnail);
+
+                $("#bookshelf").append(bookArray);
+
+                //firebaseに保存する処理//
+
+                const data = {
+                  title: selectTitle,
+                  thumbnail: selectThumbnail,
+                  time: serverTimestamp(),
+                };
+                addDoc(collection(db, "bookshelf"), data);
+
+
+                //$("#btn_load").on("click", function () {
+                //  const querySnapshot = await getDocs(collection(db, "bookshelf"));
+                //  querySnapshot.forEach((doc) => {
+                //    // doc.data() is never undefined for query doc snapshots
+                //    console.log(doc.id, " => ", doc.data());
+                //  })
+                //});
+
+                //const books = [];
+                //db.collection("bookshelf").get().then((docs) => {
+                //  // success
+                //  if (docs.exists) {
+                //    docs.forEach(doc => {
+                //      books.push(doc.data())
+                //    });
+                //  };
+                //  console.log(books);
+                //}).catch(error => {
+                //  // error
+                //})
+
+
+                //firebaseからデータを読み出す処理//
+                //保存された順番に表示//
+
+                const q = query(collection(db, "bookshelf"), orderBy("time", "desc"));
+
+                onSnapshot(q, (querySnapshot) => {
+
+                  const dataArray = [];
+                  querySnapshot.docs.forEach(function (doc) {
+                    const data = {
+                      id: doc.id,
+                      data: doc.data(),
+                    };
+                    dataArray.push(data);
+                  });
+                  console.log(dataArray);
+
+                  const tagArray = [];
+                  dataArray.forEach(function (data) {
+                    tagArray.push(`${data.data.thumbnail}`);
+                  });
+
+                  $("#bookshelf").html(tagArray);
+
+                });
+
+              });
+
+            });
+
+          };
+
+        })
+        .catch(function (error) {
+          console.log(error);
+        })
+
+        .finally(function () {
+          console.log("done");
+        });
+
+    });
+
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+body{
+    list-style: none;
+}
+
+h1{
+    text-align: center;
+}
+
+.wrapper {
+    display: flex;
+}
+
+.search_area{
+    width: 50%;
+}
+
+.book_area{
+    width: 50%;
+}
+
+.book_area{
+    background: url(img/gettyimages-509050154-612x612.jpg);
+    background-size: cover;
+    background-position: center;
+    height: 700px;
+}
